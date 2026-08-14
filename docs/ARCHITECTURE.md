@@ -201,7 +201,7 @@ of which this design leans on.
 | Table | Columns and intent |
 |-------|--------------------|
 | `users` | `id`, `email` (**UNIQUE**), `display_name`, `password_hash`, `auth_provider`, `provider_id`, `created_at` |
-| `books` | `id`, `title`, `author`, `pages`, `image_url` (**nullable by requirement**), `price NUMERIC(10,2)`, `stock`, `created_at` |
+| `books` | `id`, `title`, `author`, `description` (**required**), `pages`, `image_url` (**nullable by requirement**), `price NUMERIC(10,2)`, `stock`, `created_at` |
 | `cart_items` | One row per `(user, book)` — `UNIQUE` constraint, `quantity > 0` CHECK. **The active cart lives server-side, so it survives devices and sessions** |
 | `orders` | `user_id`, `status` CHECK IN (`CONFIRMED`/`SHIPPED`/`CANCELLED`), `total_amount`, shipping fields, `payment_reference` (mock), `created_at` |
 | `order_items` | **Immutable snapshot** of `title` + `unit_price` + `quantity` at purchase time |
@@ -220,8 +220,9 @@ Consequences:
 - lookups are case-insensitive and emails are normalised to lower case on
   registration, so `Gal@x.com` and `gal@x.com` cannot become two accounts.
 
-`display_name` holds the validated full name (two words, letters only) and is
-reused as the shipping recipient at checkout.
+`display_name` holds the validated full name (two or more names separated by
+spaces, letters and hyphens only) and is reused as the shipping recipient at
+checkout.
 
 **Why `order_items` snapshot the title and unit price instead of joining back
 to `books`: later catalog edits must never rewrite what a customer was
@@ -258,9 +259,16 @@ everything back. Cancellation restores stock under the same row locks.
 
 `V1__init.sql` creates the five tables with every constraint; `V2__seed_books.sql`
 seeds a 20-book catalog, two of them deliberately without a cover image to
-exercise the nullable-image path. **Why Flyway: a brand-new empty database
-becomes a working one on first boot with no manual SQL, and the migration
-history is versioned in the repository alongside the code that depends on it.**
+exercise the nullable-image path; `V3__add_book_description.sql` adds the
+required per-book description. **Why Flyway: a brand-new empty database becomes
+a working one on first boot with no manual SQL, and the migration history is
+versioned in the repository alongside the code that depends on it.**
+
+**Why V3 adds the column in three steps — nullable, backfill, then `SET NOT
+NULL` — rather than declaring it `NOT NULL` outright: the live database already
+holds rows, and a bare `NOT NULL` addition would fail on them.** A catch-all
+`UPDATE` fills anything the per-title backfill missed, so the migration cannot
+break on unexpected data.
 
 ## 5. Frontend — React 18 + TypeScript 5.6 (Vite, Zustand)
 

@@ -23,6 +23,10 @@ public class Book {
     @Column(nullable = false)
     private String author;
 
+    /** Short blurb shown on the catalog card; required for every book. */
+    @Column(nullable = false, length = 500)
+    private String description;
+
     @Column(nullable = false)
     private int pages;
 
@@ -50,6 +54,10 @@ public class Book {
 
     public String getAuthor() {
         return author;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public int getPages() {

@@ -37,10 +37,12 @@ import java.time.Duration;
 @EnableCaching
 public class CacheConfig implements CachingConfigurer {
 
+    // The version suffix is bumped whenever the cached DTO shape changes, so a
+    // deploy never serves entries written against the previous structure.
     /** Paginated catalog responses, keyed by page/size/search/sort. Short TTL. */
-    public static final String BOOKS_PAGE_CACHE = "booksPage";
+    public static final String BOOKS_PAGE_CACHE = "booksPage.v2";
     /** Single book lookups, keyed by id. */
-    public static final String BOOK_CACHE = "book";
+    public static final String BOOK_CACHE = "book.v2";
 
     private static final Logger log = LoggerFactory.getLogger(CacheConfig.class);
 

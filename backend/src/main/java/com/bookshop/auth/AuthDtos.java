@@ -13,8 +13,11 @@ public final class AuthDtos {
     }
 
     /**
-     * Full name policy: exactly two words made of letters only (any alphabet),
-     * separated by exactly one space - e.g. "Gal Rubinstein".
+     * Full name policy: two or more words separated by single spaces, so
+     * "Elad Ben David" is as valid as "Gal Rubinstein". Words are letters in
+     * any alphabet, with the hyphen as the only permitted non-letter and only
+     * between letters - "Jean-Pierre Dupont" passes, "%", digits, underscores,
+     * leading/trailing hyphens and double spaces do not.
      *
      * <p>Every field is length-bounded, so an oversized payload is rejected by
      * validation rather than reaching the database.
@@ -24,8 +27,9 @@ public final class AuthDtos {
             @NotBlank @Size(min = 8, max = 72) String password,
             @NotBlank
             @Size(max = 120)
-            @Pattern(regexp = "\\p{L}+ \\p{L}+",
-                    message = "must be two names, letters only, separated by a single space")
+            @Pattern(regexp = "\\p{L}+(?:-\\p{L}+)*(?: \\p{L}+(?:-\\p{L}+)*)+",
+                    message = "must be at least two names separated by a space, using letters "
+                            + "and hyphens only")
             String fullName) {
     }
 

@@ -4,7 +4,7 @@ import { useCartStore } from '../stores/cartStore';
 import { useThemeStore } from '../stores/themeStore';
 
 export default function NavBar() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, initializing } = useAuthStore();
   const totalItems = useCartStore((state) => state.cart?.totalItems ?? 0);
   const { theme, toggle } = useThemeStore();
   const navigate = useNavigate();
@@ -46,7 +46,9 @@ export default function NavBar() {
             {theme === 'dark' ? '🌙' : '☀️'}
           </span>
         </button>
-        {user ? (
+        {/* Hold the auth area blank until the stored token is validated,
+            so a signed-in user never sees "Sign in" flash first. */}
+        {initializing ? null : user ? (
           <>
             <span className="nav-user" title={user.email}>
               {user.displayName}

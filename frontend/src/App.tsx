@@ -17,7 +17,7 @@ import { useCartStore } from './stores/cartStore';
 import './stores/themeStore'; // applies the persisted theme before first paint
 
 export default function App() {
-  const { user, initializing, initialize } = useAuthStore();
+  const { user, initialize } = useAuthStore();
   const fetchCart = useCartStore((state) => state.fetch);
   const clearCart = useCartStore((state) => state.clearLocal);
 
@@ -33,10 +33,10 @@ export default function App() {
     }
   }, [user, fetchCart, clearCart]);
 
-  if (initializing) {
-    return <div className="page-loader">Loading…</div>;
-  }
-
+  // NOTE: the app is NOT gated on `initializing`. Blocking the whole tree on
+  // GET /api/auth/me would serialise two round-trips - the profile call and
+  // then the catalog call - which is painfully visible on a cold backend.
+  // The public catalog starts loading immediately; only protected routes wait.
   return (
     <div className="app-shell">
       <ScrollToTop />

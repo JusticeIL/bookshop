@@ -36,8 +36,9 @@ API endpoint hierarchy at a glance: [API-Reference.pdf](API-Reference.pdf).
   embedded in this backend (Spring Authorization Server — no third-party or paid identity
   provider). Renewal rotates the refresh token via `POST /api/auth/refresh`, and the standards-compliant
   Authorization Code + PKCE endpoints remain available for any non-first-party client. **Email is the login identity**: each user has exactly one email and one
-  password, so email is `UNIQUE` in the database. Full names are validated (two words,
-  letters only, single space) and reused as the shipping recipient at checkout.
+  password, so email is `UNIQUE` in the database. Full names are validated (two or more
+  names separated by spaces; letters and hyphens only) and reused as the shipping
+  recipient at checkout.
 - **Cart** — add / remove / change quantity, persisted server-side per user, with
   **optimistic UI updates** (instant feedback, automatic rollback on stock errors).
 - **Checkout** — multi-step flow (shipping → payment → confirmation). Payment is

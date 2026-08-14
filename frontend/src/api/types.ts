@@ -4,6 +4,7 @@ export interface Book {
   id: number;
   title: string;
   author: string;
+  description: string;
   pages: number;
   imageUrl: string | null;
   price: number;

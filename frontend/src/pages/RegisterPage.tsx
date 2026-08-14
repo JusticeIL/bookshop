@@ -4,10 +4,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
 /**
- * Full name policy (mirrors the backend @Pattern validation): exactly two
- * words made of letters only (any alphabet), separated by a single space.
+ * Full name policy (mirrors the backend @Pattern validation): two or more
+ * words separated by single spaces, so "Elad Ben David" is as valid as
+ * "Gal Rubinstein". Words are letters in any alphabet, with the hyphen as the
+ * only permitted non-letter and only between letters - "Jean-Pierre" passes,
+ * while "%", digits, underscores and stray hyphens do not.
  */
-const FULL_NAME_PATTERN = /^\p{L}+ \p{L}+$/u;
+const FULL_NAME_PATTERN = /^\p{L}+(?:-\p{L}+)*(?: \p{L}+(?:-\p{L}+)*)+$/u;
 
 export default function RegisterPage() {
   const register = useAuthStore((state) => state.register);
@@ -23,7 +26,7 @@ export default function RegisterPage() {
     const trimmedName = fullName.trim();
     if (!FULL_NAME_PATTERN.test(trimmedName)) {
       setError(
-        'Full name must be exactly two names separated by a single space, letters only (e.g. "Gal Rubinstein").',
+        'Full name must be at least two names separated by a space, using letters and hyphens only (e.g. "Elad Ben David" or "Jean-Pierre Dupont").',
       );
       return;
     }
@@ -54,13 +57,13 @@ export default function RegisterPage() {
             required
             maxLength={120}
             autoComplete="name"
-            placeholder="First Last"
+            placeholder="Full Name"
             autoFocus
             tabIndex={1}
           />
           <small className="field-hint">
-            Two names, letters only, separated by one space — used as the recipient name at
-            checkout.
+            At least two names separated by a space; letters and hyphens only — used as the
+            recipient name at checkout.
           </small>
         </label>
         <label>

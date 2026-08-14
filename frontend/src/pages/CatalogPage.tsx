@@ -61,7 +61,24 @@ export default function CatalogPage() {
       </div>
 
       {error && <div className="alert">{error}</div>}
-      {loading && !result && <div className="page-loader">Loading books…</div>}
+
+      {/* Skeleton cards rather than a spinner: the grid keeps its final shape,
+          so nothing jumps when the real data lands. */}
+      {loading && !result && !error && (
+        <div className="book-grid" aria-busy="true" aria-label="Loading books">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div key={index} className="book-card skeleton">
+              <div className="skeleton-cover" />
+              <div className="book-info">
+                <div className="skeleton-line wide" />
+                <div className="skeleton-line wide" />
+                <div className="skeleton-line" />
+                <div className="skeleton-line short" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {result && (
         <>

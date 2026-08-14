@@ -54,6 +54,9 @@ export default function BookCard({ book }: { book: Book }) {
       </div>
       <div className="book-info">
         <h3 title={book.title}>{book.title}</h3>
+        <p className="book-description" title={book.description}>
+          {book.description}
+        </p>
         <p className="book-author">{book.author}</p>
         <p className="book-meta">
           {book.pages} pages · {soldOut ? 'Out of stock' : `${book.stock} in stock`}
