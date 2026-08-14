@@ -15,25 +15,45 @@ spring:
   flyway:
     enabled: true
 
+  cache:
+    type: redis
+
+  servlet:
+    multipart:
+      enabled: false # the API accepts no file uploads
+
+  data:
+    redis:
+      # Catalog read-cache. If Redis is unreachable the app degrades gracefully
+      # and serves straight from PostgreSQL (see CacheConfig's error handler).
+      url: ${REDIS_URL:redis://localhost:6379}
+      timeout: 1500ms
+
 server:
   port: ${PORT:8080}
   forward-headers-strategy: framework # trust X-Forwarded-* headers behind Render's proxy
+  error:
+    # Never leak internals to clients; failures are logged server-side instead.
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+  max-http-request-header-size: 16KB
+  tomcat:
+    max-swallow-size: 2MB
+    max-http-form-post-size: 256KB
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: ${COOKIE_SECURE:false} # set true in production (HTTPS)
+        same-site: lax
 
 app:
+  # Drives the CORS allow-list and the registered OAuth2 redirect URI.
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
-  jwt:
-    # HS256 signing key. MUST be overridden with a long random value in production.
-    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me-0123456789}
-    expiration-minutes: ${JWT_EXPIRATION_MINUTES:10080} # 7 days: covers the whole review window
-  oauth:
-    # Leave blank to disable a provider; the frontend discovers enabled providers
-    # via GET /api/auth/providers and only renders the corresponding buttons.
-    google:
-      client-id: ${GOOGLE_CLIENT_ID:}
-      client-secret: ${GOOGLE_CLIENT_SECRET:}
-    facebook:
-      client-id: ${FACEBOOK_CLIENT_ID:}
-      client-secret: ${FACEBOOK_CLIENT_SECRET:}
+  # "iss" claim stamped into issued access tokens.
+  issuer-url: ${ISSUER_URL:http://localhost:8080}
 
 logging:
   level:

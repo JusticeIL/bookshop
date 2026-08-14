@@ -1,22 +1,16 @@
+import { API_URL, refreshAccessToken, tokenStorage } from './oauth';
+import { toast } from '../stores/toastStore';
 import type {
-  AuthResponse,
   Book,
   Cart,
   CheckoutRequest,
   Order,
   PageResponse,
+  TokenResponse,
   User,
 } from './types';
 
-export const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
-
-const TOKEN_KEY = 'bookshop.token';
-
-export const tokenStorage = {
-  get: (): string | null => localStorage.getItem(TOKEN_KEY),
-  set: (token: string): void => localStorage.setItem(TOKEN_KEY, token),
-  clear: (): void => localStorage.removeItem(TOKEN_KEY),
-};
+export { API_URL, tokenStorage };
 
 export class ApiError extends Error {
   constructor(
@@ -27,17 +21,44 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+/** Throttles the red "server unreachable" toast so bursts don't spam the user. */
+let lastConnectionToastAt = 0;
+
+function notifyConnectionProblem(): void {
+  const now = Date.now();
+  if (now - lastConnectionToastAt > 6000) {
+    lastConnectionToastAt = now;
+    toast.error('Cannot reach the server - it may be starting up. Please try again in a moment.');
+  }
+}
+
+async function send(path: string, options: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> | undefined),
   };
-  const token = tokenStorage.get();
+  const token = tokenStorage.getAccess();
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
+  return fetch(`${API_URL}${path}`, { ...options, headers });
+}
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  let response: Response;
+  try {
+    response = await send(path, options);
+    // Access tokens are short-lived (30 min); transparently rotate the refresh
+    // token and replay the call once before surfacing a 401 to the user.
+    if (response.status === 401 && (await refreshAccessToken())) {
+      response = await send(path, options);
+    }
+  } catch {
+    // Network-level failure: backend down, DB gone, CORS, DNS…
+    notifyConnectionProblem();
+    throw new ApiError(0, 'Server unreachable');
+  }
+
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
     try {
@@ -66,19 +87,18 @@ export const api = {
     return request<PageResponse<Book>>(`/api/books?${query}`);
   },
 
-  // Auth
-  register: (email: string, password: string, displayName: string) =>
-    request<AuthResponse>('/api/auth/register', {
+  // Accounts
+  register: (email: string, password: string, fullName: string) =>
+    request<TokenResponse>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, fullName }),
     }),
   login: (email: string, password: string) =>
-    request<AuthResponse>('/api/auth/login', {
+    request<TokenResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
   me: () => request<User>('/api/auth/me'),
-  authProviders: () => request<{ providers: string[] }>('/api/auth/providers'),
 
   // Cart
   getCart: () => request<Cart>('/api/cart'),
@@ -99,9 +119,6 @@ export const api = {
   checkout: (payload: CheckoutRequest) =>
     request<Order>('/api/orders', { method: 'POST', body: JSON.stringify(payload) }),
   listOrders: () => request<Order[]>('/api/orders'),
+  cancelOrder: (orderId: number) =>
+    request<Order>(`/api/orders/${orderId}`, { method: 'DELETE' }),
 };
-
-/** Entry point for the backend-driven OAuth2 handshake. */
-export function oauthLoginUrl(provider: 'google' | 'facebook'): string {
-  return `${API_URL}/oauth2/authorization/${provider}`;
-}

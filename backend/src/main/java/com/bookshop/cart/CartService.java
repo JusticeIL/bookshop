@@ -35,33 +35,33 @@ public class CartService {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new NotFoundException("Book %d not found".formatted(bookId)));
 
-        CartItem item = cartItemRepository.findByUserIdAndBookId(userId, bookId).orElse(null);
-        int newQuantity = (item == null ? 0 : item.getQuantity()) + quantity;
-        if (newQuantity > book.getStock()) {
-            throw new BadRequestException(
-                    "Only %d copies of '%s' are in stock".formatted(book.getStock(), book.getTitle()));
-        }
-
-        if (item == null) {
-            User user = userRepository.getReferenceById(userId);
-            cartItemRepository.save(new CartItem(user, book, quantity));
-        } else {
-            item.setQuantity(newQuantity);
-        }
+        cartItemRepository.findByUserIdAndBookId(userId, bookId).ifPresentOrElse(
+                item -> item.setQuantity(requireInStock(book, item.getQuantity() + quantity)),
+                () -> {
+                    User user = userRepository.getReferenceById(userId);
+                    cartItemRepository.save(new CartItem(user, book, requireInStock(book, quantity)));
+                });
         return getCart(userId);
     }
 
     @Transactional
     public CartDto updateQuantity(Long userId, Long bookId, int quantity) {
-        CartItem item = cartItemRepository.findByUserIdAndBookId(userId, bookId)
+        cartItemRepository.findByUserIdAndBookId(userId, bookId)
+                .map(item -> {
+                    item.setQuantity(requireInStock(item.getBook(), quantity));
+                    return item;
+                })
                 .orElseThrow(() -> new NotFoundException("Book %d is not in the cart".formatted(bookId)));
-        if (quantity > item.getBook().getStock()) {
-            throw new BadRequestException(
-                    "Only %d copies of '%s' are in stock"
-                            .formatted(item.getBook().getStock(), item.getBook().getTitle()));
-        }
-        item.setQuantity(quantity);
         return getCart(userId);
+    }
+
+    /** Validates the requested quantity against stock; returns it for fluent use. */
+    private static int requireInStock(Book book, int quantity) {
+        if (quantity > book.getStock()) {
+            throw new BadRequestException(
+                    "Only %d copies of '%s' are in stock".formatted(book.getStock(), book.getTitle()));
+        }
+        return quantity;
     }
 
     @Transactional

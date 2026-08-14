@@ -68,6 +68,10 @@ public class Order {
         items.add(item);
     }
 
+    public void markCancelled() {
+        this.status = "CANCELLED";
+    }
+
     public Long getId() {
         return id;
     }

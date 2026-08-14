@@ -22,11 +22,12 @@ export interface User {
   id: number;
   email: string;
   displayName: string;
-  authProvider: 'LOCAL' | 'GOOGLE' | 'FACEBOOK';
 }
 
-export interface AuthResponse {
-  token: string;
+export interface TokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
   user: User;
 }
 
@@ -61,7 +62,6 @@ export interface Order {
 }
 
 export interface CheckoutRequest {
-  shippingName: string;
   shippingAddress: string;
   mockCardNumber?: string;
 }

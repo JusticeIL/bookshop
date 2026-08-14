@@ -25,15 +25,18 @@ public class User {
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
-    /** BCrypt hash; {@code null} for social-login accounts. */
+    /** BCrypt hash of the account password. */
     @Column(name = "password_hash")
     private String passwordHash;
 
+    /**
+     * The users table keeps multi-provider columns (auth_provider, provider_id)
+     * for forward compatibility; the application currently supports LOCAL only.
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "auth_provider", nullable = false)
     private AuthProvider authProvider = AuthProvider.LOCAL;
 
-    /** Stable id issued by the social provider; {@code null} for local accounts. */
     @Column(name = "provider_id")
     private String providerId;
 
@@ -50,15 +53,6 @@ public class User {
         user.displayName = displayName;
         user.passwordHash = passwordHash;
         user.authProvider = AuthProvider.LOCAL;
-        return user;
-    }
-
-    public static User social(String email, String displayName, AuthProvider provider, String providerId) {
-        User user = new User();
-        user.email = email;
-        user.displayName = displayName;
-        user.authProvider = provider;
-        user.providerId = providerId;
         return user;
     }
 

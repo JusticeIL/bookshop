@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import SocialButtons from '../components/SocialButtons';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
 export default function LoginPage() {
@@ -12,12 +11,6 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-
-  const oauthError =
-    searchParams.get('error') === 'email-in-use'
-      ? 'This email is already registered with a different sign-in method.'
-      : null;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -35,36 +28,41 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="auth-page">
+    <section className="auth-page glass-panel">
       <h1>Sign in</h1>
-      {oauthError && <div className="alert">{oauthError}</div>}
       {error && <div className="alert">{error}</div>}
       <form onSubmit={handleSubmit} className="auth-form">
         <label>
           Email
           <input
             type="email"
+            name="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
+            maxLength={254}
             autoComplete="email"
+            autoFocus
+            tabIndex={1}
           />
         </label>
         <label>
           Password
           <input
             type="password"
+            name="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
+            maxLength={72}
             autoComplete="current-password"
+            tabIndex={2}
           />
         </label>
-        <button type="submit" className="btn btn-primary" disabled={submitting}>
+        <button type="submit" className="btn btn-primary" disabled={submitting} tabIndex={3}>
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      <SocialButtons />
       <p className="auth-switch">
         New here? <Link to="/register">Create an account</Link>
       </p>

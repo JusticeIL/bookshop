@@ -1,21 +1,20 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
 import type { Book, Cart } from '../api/types';
+import { toast } from './toastStore';
 
 /**
  * Cart store with optimistic updates: the UI reflects add/remove/quantity
  * changes immediately, and rolls back to the previous server state if the
- * API call fails (e.g. out of stock).
+ * API call fails (e.g. out of stock). User feedback goes through toasts.
  */
 interface CartState {
   cart: Cart | null;
-  error: string | null;
   fetch: () => Promise<void>;
   add: (book: Book, quantity?: number) => Promise<void>;
   updateQuantity: (bookId: number, quantity: number) => Promise<void>;
   remove: (bookId: number) => Promise<void>;
   clearLocal: () => void;
-  clearError: () => void;
 }
 
 const emptyCart: Cart = { items: [], totalItems: 0, totalAmount: 0 };
@@ -32,9 +31,12 @@ function recalculate(cart: Cart): Cart {
   };
 }
 
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message !== 'Server unreachable' ? err.message : fallback;
+}
+
 export const useCartStore = create<CartState>((set, get) => ({
   cart: null,
-  error: null,
 
   fetch: async () => {
     try {
@@ -55,11 +57,13 @@ export const useCartStore = create<CartState>((set, get) => ({
           )
         : [...previous.items, { book, quantity, lineTotal: 0 }],
     });
-    set({ cart: optimistic, error: null });
+    set({ cart: optimistic });
     try {
       set({ cart: await api.addToCart(book.id, quantity) });
+      toast.success(`"${book.title}" added to cart`);
     } catch (err) {
-      set({ cart: previous, error: err instanceof Error ? err.message : 'Failed to add to cart' });
+      set({ cart: previous });
+      toast.error(errorMessage(err, `Could not add "${book.title}" to the cart`));
     }
   },
 
@@ -71,28 +75,31 @@ export const useCartStore = create<CartState>((set, get) => ({
         item.book.id === bookId ? { ...item, quantity } : item,
       ),
     });
-    set({ cart: optimistic, error: null });
+    set({ cart: optimistic });
     try {
       set({ cart: await api.updateCartItem(bookId, quantity) });
     } catch (err) {
-      set({ cart: previous, error: err instanceof Error ? err.message : 'Failed to update cart' });
+      set({ cart: previous });
+      toast.error(errorMessage(err, 'Could not update the cart'));
     }
   },
 
   remove: async (bookId) => {
     const previous = get().cart ?? emptyCart;
+    const removed = previous.items.find((item) => item.book.id === bookId);
     const optimistic = recalculate({
       ...previous,
       items: previous.items.filter((item) => item.book.id !== bookId),
     });
-    set({ cart: optimistic, error: null });
+    set({ cart: optimistic });
     try {
       set({ cart: await api.removeFromCart(bookId) });
+      if (removed) toast.info(`"${removed.book.title}" removed from cart`);
     } catch (err) {
-      set({ cart: previous, error: err instanceof Error ? err.message : 'Failed to remove item' });
+      set({ cart: previous });
+      toast.error(errorMessage(err, 'Could not remove the item'));
     }
   },
 
   clearLocal: () => set({ cart: emptyCart }),
-  clearError: () => set({ error: null }),
 }));

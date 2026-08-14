@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../stores/cartStore';
 
 export default function CartPage() {
-  const { cart, error, updateQuantity, remove, clearError } = useCartStore();
+  const { cart, updateQuantity, remove } = useCartStore();
   const navigate = useNavigate();
 
   if (!cart) {
@@ -24,17 +24,9 @@ export default function CartPage() {
   return (
     <section className="cart-page">
       <h1>Your cart</h1>
-      {error && (
-        <div className="alert" role="alert">
-          {error}
-          <button type="button" onClick={clearError} aria-label="Dismiss">
-            ✕
-          </button>
-        </div>
-      )}
       <ul className="cart-list">
         {cart.items.map((item) => (
-          <li key={item.book.id} className="cart-row">
+          <li key={item.book.id} className="cart-row glass-panel">
             <div className="cart-book">
               <strong>{item.book.title}</strong>
               <span className="book-author">{item.book.author}</span>
@@ -74,7 +66,7 @@ export default function CartPage() {
           </li>
         ))}
       </ul>
-      <div className="cart-summary">
+      <div className="cart-summary glass-panel">
         <span>
           Total ({cart.totalItems} {cart.totalItems === 1 ? 'item' : 'items'}):{' '}
           <strong>${cart.totalAmount.toFixed(2)}</strong>

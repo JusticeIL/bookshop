@@ -6,6 +6,7 @@ import com.bookshop.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,5 +42,14 @@ public class OrderController {
     @GetMapping("/{id}")
     public OrderDto getOrder(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
         return orderService.getOrder(user.id(), id);
+    }
+
+    /**
+     * Cancels an order (allowed within 24h of purchase). Modelled as DELETE on
+     * the order resource; the row is kept as CANCELLED for history/auditability.
+     */
+    @DeleteMapping("/{id}")
+    public OrderDto cancelOrder(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
+        return orderService.cancel(user.id(), id);
     }
 }

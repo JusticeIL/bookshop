@@ -2,17 +2,14 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { Book, PageResponse } from '../api/types';
 import BookCard from '../components/BookCard';
-import { useCartStore } from '../stores/cartStore';
 
 export default function CatalogPage() {
   const [result, setResult] = useState<PageResponse<Book> | null>(null);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState('id');
+  const [sort, setSort] = useState('id:asc');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const cartError = useCartStore((state) => state.error);
-  const clearCartError = useCartStore((state) => state.clearError);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,17 +39,19 @@ export default function CatalogPage() {
 
   return (
     <section>
-      <div className="catalog-toolbar">
+      <div className="catalog-toolbar glass-panel">
         <input
           type="search"
+          name="search"
           placeholder="Search by title or author…"
           value={search}
+          tabIndex={1}
           onChange={(event) => {
             setSearch(event.target.value);
             setPage(0);
           }}
         />
-        <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort books">
+        <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort books" tabIndex={2}>
           <option value="id:asc">Newest first</option>
           <option value="title:asc">Title A→Z</option>
           <option value="price:asc">Price: low to high</option>
@@ -61,14 +60,6 @@ export default function CatalogPage() {
         </select>
       </div>
 
-      {cartError && (
-        <div className="alert" role="alert">
-          {cartError}
-          <button type="button" onClick={clearCartError} aria-label="Dismiss">
-            ✕
-          </button>
-        </div>
-      )}
       {error && <div className="alert">{error}</div>}
       {loading && !result && <div className="page-loader">Loading books…</div>}
 

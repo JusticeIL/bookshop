@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign in · The Online Bookshop</title>
+    <style>
+      :root {
+        --text: #10233a;
+        --muted: #51677e;
+        --accent: #0e7490;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(1100px 600px at 8% -10%, #b7f0dd 0%, transparent 60%),
+          radial-gradient(900px 600px at 100% 0%, #bfe3ff 0%, transparent 55%),
+          radial-gradient(900px 700px at 50% 110%, #ffe3c7 0%, transparent 55%),
+          linear-gradient(160deg, #eef6f4 0%, #e9f0fa 100%);
+        padding: 1.5rem;
+      }
+      .card {
+        width: 100%;
+        max-width: 400px;
+        padding: 2rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.6);
+        -webkit-backdrop-filter: blur(18px) saturate(160%);
+        backdrop-filter: blur(18px) saturate(160%);
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        box-shadow: 0 8px 32px rgba(16, 35, 58, 0.12);
+      }
+      h1 { margin: 0 0 0.25rem; font-size: 1.3rem; }
+      .brand { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.4rem; }
+      form { display: flex; flex-direction: column; gap: 0.95rem; }
+      label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; font-weight: 600; }
+      input {
+        padding: 0.6rem 0.9rem;
+        border: 1px solid rgba(16, 35, 58, 0.14);
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      input:focus {
+        outline: none;
+        border-color: #0d7a68;
+        box-shadow: 0 0 0 4px rgba(13, 122, 104, 0.16);
+      }
+      button {
+        margin-top: 0.2rem;
+        padding: 0.6rem 1.15rem;
+        border: none;
+        border-radius: 999px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #fff;
+        cursor: pointer;
+        background: linear-gradient(135deg, #10b981 0%, var(--accent) 120%);
+        box-shadow: 0 6px 18px rgba(13, 122, 104, 0.35);
+      }
+      .alert {
+        background: rgba(253, 236, 234, 0.9);
+        border: 1px solid rgba(192, 57, 43, 0.3);
+        color: #c0392b;
+        border-radius: 12px;
+        padding: 0.6rem 0.9rem;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+      }
+      .note { margin-top: 1.1rem; font-size: 0.8rem; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Sign in</h1>
+      <p class="brand">📚 The Online Bookshop</p>
+
+      <div class="alert" th:if="${param.error}">Invalid email or password.</div>
+      <div class="alert" th:if="${param.logout}">You have been signed out.</div>
+
+      <form method="post" th:action="@{/login}">
+        <label>
+          Email
+          <input type="email" name="username" autocomplete="email" required autofocus tabindex="1" />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="current-password" required tabindex="2" />
+        </label>
+        <button type="submit" tabindex="3">Sign in</button>
+      </form>
+
+      <p class="note">
+        You are signing in on the Bookshop authorization server. Your password is never
+        seen by the shop front-end.
+      </p>
+    </main>
+  </body>
+</html>

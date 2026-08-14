@@ -74,4 +74,9 @@ public class Book {
         }
         this.stock -= quantity;
     }
+
+    /** Returns stock to the shelf, e.g. when an order is cancelled. */
+    public void increaseStock(int quantity) {
+        this.stock += quantity;
+    }
 }

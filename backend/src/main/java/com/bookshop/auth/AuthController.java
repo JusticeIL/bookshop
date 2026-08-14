@@ -1,19 +1,15 @@
 package com.bookshop.auth;
 
-import com.bookshop.auth.AuthDtos.AuthResponse;
 import com.bookshop.auth.AuthDtos.LoginRequest;
-import com.bookshop.auth.AuthDtos.ProvidersResponse;
+import com.bookshop.auth.AuthDtos.RefreshRequest;
 import com.bookshop.auth.AuthDtos.RegisterRequest;
+import com.bookshop.auth.AuthDtos.TokenResponse;
 import com.bookshop.auth.AuthDtos.UserDto;
 import com.bookshop.security.AuthenticatedUser;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.client.registration.ClientRegistration;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,31 +17,41 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * Account endpoints of the REST API.
+ *
+ * <p>Sign-in happens here, in the application's own UI: the SPA posts
+ * credentials over TLS and receives the same RS256 access token and rotating
+ * refresh token the authorization server issues, which are then renewed
+ * through {@code POST /api/auth/refresh}, which rotates the refresh token.
+ *
+ * <p>Both credential endpoints sit behind a per-IP rate limiter.
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
-    private final ObjectProvider<ClientRegistrationRepository> clientRegistrations;
 
-    public AuthController(AuthService authService,
-                          ObjectProvider<ClientRegistrationRepository> clientRegistrations) {
+    public AuthController(AuthService authService) {
         this.authService = authService;
-        this.clientRegistrations = clientRegistrations;
     }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
+    public TokenResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+    public TokenResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    /** Rotates the refresh token; the presented one is consumed. */
+    @PostMapping("/refresh")
+    public TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
+        return authService.refresh(request);
     }
 
     @GetMapping("/me")
@@ -54,18 +60,5 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         return ResponseEntity.ok(authService.currentUser(user.id()));
-    }
-
-    /** Lets the SPA render only the social buttons that are actually configured. */
-    @GetMapping("/providers")
-    public ProvidersResponse providers() {
-        List<String> providers = new ArrayList<>();
-        ClientRegistrationRepository repository = clientRegistrations.getIfAvailable();
-        if (repository instanceof InMemoryClientRegistrationRepository inMemory) {
-            for (ClientRegistration registration : inMemory) {
-                providers.add(registration.getRegistrationId());
-            }
-        }
-        return new ProvidersResponse(providers);
     }
 }

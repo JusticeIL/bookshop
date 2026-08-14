@@ -1,17 +1,17 @@
 import { create } from 'zustand';
-import { api, tokenStorage } from '../api/client';
+import { api } from '../api/client';
+import { tokenStorage } from '../api/oauth';
 import type { User } from '../api/types';
+import { toast } from './toastStore';
 
 interface AuthState {
   user: User | null;
-  /** true while the persisted token is being re-validated on app start */
+  /** true while a persisted access token is being re-validated on app start */
   initializing: boolean;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  /** Called by the /oauth2/redirect route after a social login round-trip. */
-  acceptToken: (token: string) => Promise<void>;
-  logout: () => void;
   initialize: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string) => Promise<void>;
+  logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -19,7 +19,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   initializing: true,
 
   initialize: async () => {
-    if (!tokenStorage.get()) {
+    if (!tokenStorage.getAccess() && !tokenStorage.getRefresh()) {
       set({ initializing: false });
       return;
     }
@@ -32,26 +32,23 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (email, password, displayName) => {
-    const { token, user } = await api.register(email, password, displayName);
-    tokenStorage.set(token);
-    set({ user });
-  },
-
   login: async (email, password) => {
-    const { token, user } = await api.login(email, password);
-    tokenStorage.set(token);
+    const { accessToken, refreshToken, user } = await api.login(email, password);
+    tokenStorage.set(accessToken, refreshToken);
     set({ user });
+    toast.success(`Welcome back, ${user.displayName}!`);
   },
 
-  acceptToken: async (token) => {
-    tokenStorage.set(token);
-    const user = await api.me();
+  register: async (email, password, fullName) => {
+    const { accessToken, refreshToken, user } = await api.register(email, password, fullName);
+    tokenStorage.set(accessToken, refreshToken);
     set({ user });
+    toast.success(`Welcome to the Bookshop, ${user.displayName}!`);
   },
 
   logout: () => {
     tokenStorage.clear();
     set({ user: null });
+    toast.info('Signed out. See you soon!');
   },
 }));

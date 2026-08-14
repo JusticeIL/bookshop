@@ -14,11 +14,12 @@ public final class OrderDtos {
     }
 
     /**
-     * Checkout request. Payment is intentionally mocked: we accept a free-text
-     * "card number" but never validate, store, or transmit it anywhere.
+     * Checkout request. The recipient name is taken from the signed-in account's
+     * full name, so only the address is asked for. Payment is intentionally
+     * mocked: we accept a free-text "card number" but never validate, store, or
+     * transmit it anywhere.
      */
     public record CheckoutRequest(
-            @NotBlank @Size(max = 120) String shippingName,
             @NotBlank @Size(max = 500) String shippingAddress,
             @Size(max = 30) String mockCardNumber) {
     }

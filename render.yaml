@@ -14,15 +14,11 @@ services:
         sync: false
       - key: DATABASE_PASSWORD
         sync: false
-      - key: JWT_SECRET
-        generateValue: true
       - key: FRONTEND_URL
         sync: false # https://<your-app>.vercel.app
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: FACEBOOK_CLIENT_ID
-        sync: false
-      - key: FACEBOOK_CLIENT_SECRET
-        sync: false
+      - key: ISSUER_URL
+        sync: false # https://<this-service>.onrender.com
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: REDIS_URL
+        sync: false # optional - e.g. an Upstash/Render Key Value URL; app degrades gracefully without it

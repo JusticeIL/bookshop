@@ -1,10 +1,12 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useCartStore } from '../stores/cartStore';
+import { useThemeStore } from '../stores/themeStore';
 
 export default function NavBar() {
   const { user, logout } = useAuthStore();
   const totalItems = useCartStore((state) => state.cart?.totalItems ?? 0);
+  const { theme, toggle } = useThemeStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -13,12 +15,14 @@ export default function NavBar() {
   };
 
   return (
-    <header className="navbar">
+    <header className="navbar glass">
       <Link to="/" className="brand">
         📚 The Online Bookshop
       </Link>
       <nav>
-        <NavLink to="/">Catalog</NavLink>
+        <NavLink to="/" end>
+          🏠 Home
+        </NavLink>
         {user && (
           <>
             <NavLink to="/cart">
@@ -29,13 +33,23 @@ export default function NavBar() {
         )}
       </nav>
       <div className="nav-auth">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={theme === 'dark'}
+          className="theme-switch"
+          onClick={toggle}
+          title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+        >
+          <span className="theme-switch-knob" aria-hidden="true">
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </span>
+        </button>
         {user ? (
           <>
             <span className="nav-user" title={user.email}>
               {user.displayName}
-              {user.authProvider !== 'LOCAL' && (
-                <small> (via {user.authProvider.toLowerCase()})</small>
-              )}
             </span>
             <button type="button" className="btn btn-secondary" onClick={handleLogout}>
               Sign out
