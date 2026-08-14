@@ -1,0 +1,119 @@
+ONLINE BOOKSHOP - ARCHITECTURAL PROPOSITIONS
+============================================
+(Home assignment - decisions and their rationale)
+
+1. OVERALL SHAPE
+----------------
+Three cleanly separated tiers, deployed independently:
+
+  React + TypeScript SPA  --HTTPS/JSON-->  Spring Boot 3 REST API  --JDBC-->  PostgreSQL 16
+        (Vercel)                              (Render, Docker)                  (Neon)
+
+The frontend never talks to the database; the backend is the single owner of all
+business rules; the database schema is owned by versioned Flyway migrations, not
+by the ORM (Hibernate runs in validate-only mode). Each tier can be replaced or
+scaled without touching the others.
+
+2. BACKEND - JAVA 21 / SPRING BOOT 3
+------------------------------------
+Pattern: Controller -> Service -> Repository, with DTOs at the boundary.
+
+  * Controllers are thin: HTTP concerns only (binding, validation, status codes).
+  * Services own transactions and business rules (stock checks, checkout atomicity).
+  * Repositories are Spring Data JPA interfaces; no hand-written SQL in Java code.
+  * DTOs are Java records - the API contract never leaks JPA entities, so the
+    schema can evolve without breaking clients. Records give immutability and
+    exhaustive constructors for free (modern-Java readability).
+
+Why Java/Spring here: strong compile-time typing, a mature security ecosystem
+(Spring Security handles the OAuth2 dance and BCrypt), first-class Postgres
+support, and WORA - identical jar locally and in the Render container.
+
+3. AUTHENTICATION - HAND-ROLLED, TWO PATHS, ONE SESSION MODEL
+-------------------------------------------------------------
+Both auth paths converge on the same stateless session mechanism: the API issues
+its own HS256 JWT, sent by the SPA as an Authorization: Bearer header.
+
+  a) Local accounts: email + password, BCrypt-hashed, same error message for
+     unknown email vs wrong password (no account enumeration).
+  b) Social sign-in (Google / Facebook): genuine OAuth2 authorization-code flow
+     implemented with Spring Security's oauth2-client - no Firebase/Supabase/etc.
+     Flow: SPA -> GET /oauth2/authorization/{provider} on the API -> provider
+     consent screen -> callback to the API -> success handler maps the provider
+     profile to a local user row -> API JWT is handed to the SPA via the URL
+     *fragment* of a redirect (fragments never reach servers or proxy logs).
+
+Deliberate decisions:
+  * Providers are registered only if their credentials exist in the environment;
+    GET /api/auth/providers lets the UI render only working buttons. The app is
+    fully bootable and reviewable with zero OAuth configuration.
+  * A social identity is NEVER silently merged into an existing account with the
+    same email (classic account-takeover vector); the user is told the email is
+    already in use.
+  * Facebook may legitimately not return an email (phone-registered users) - a
+    clearly-marked synthetic address is used instead of failing.
+  * users table models multi-provider identity explicitly:
+    (auth_provider, provider_id) unique pair + a CHECK constraint guaranteeing
+    local accounts have a password hash and social accounts have a provider id.
+  * CSRF protection is disabled deliberately: authentication is header-based
+    (no cookies), so there is no cross-site request forgery surface.
+
+4. DATABASE DESIGN - POSTGRESQL
+-------------------------------
+Relational engine chosen because the domain is inherently relational (users,
+books, carts, orders with line items) and correctness at checkout needs ACID.
+
+  users        id, email (unique), display_name, password_hash (nullable),
+               auth_provider CHECK IN (LOCAL/GOOGLE/FACEBOOK), provider_id,
+               created_at; UNIQUE(auth_provider, provider_id)
+  books        id, title, author, pages, image_url (NULLABLE by requirement),
+               price NUMERIC(10,2), stock, created_at
+  cart_items   one row per (user, book) - UNIQUE constraint; quantity > 0 CHECK.
+               The active cart lives server-side, so it survives devices/sessions.
+  orders       user_id, status, total_amount, shipping fields, payment_reference
+               (mock), created_at
+  order_items  IMMUTABLE SNAPSHOT of title + unit_price + quantity at purchase
+               time - later catalog price edits can never rewrite order history.
+
+Money is NUMERIC(10,2), never floats. All constraints (CHECKs, UNIQUEs, FKs) are
+in the database, not only in application code: the DB is the last line of defense.
+Checkout is a single transaction: validate stock -> decrement -> snapshot ->
+create order -> empty cart; a failure anywhere rolls everything back.
+
+5. FRONTEND - REACT 18 + TYPESCRIPT (VITE, ZUSTAND)
+---------------------------------------------------
+  * Vite for instant dev feedback and a tiny static production bundle.
+  * TypeScript API layer mirrors the backend DTOs 1:1 - a contract change is a
+    compile error, not a runtime surprise.
+  * Zustand for the two genuinely global slices (auth session, cart). It avoids
+    Context re-render cascades with ~zero boilerplate; component-local state
+    stays in useState where it belongs.
+  * Cart operations are OPTIMISTIC: the UI updates instantly and rolls back to
+    the previous server state if the API rejects (e.g. out of stock), showing
+    the server's error message.
+  * Route guards redirect unauthenticated users to /login and return them to
+    where they were after signing in.
+
+6. DEPLOYMENT - 100% FREE, STABLE FOR THE REVIEW WEEK
+-----------------------------------------------------
+  Frontend  Vercel        static CDN, zero cold starts, free SSL, git-push deploys.
+  Backend   Render free   Docker web service; multi-stage build -> slim JRE image;
+                          /api/health as health check.
+  Database  Neon free     serverless Postgres, no 30-day expiry (Render's free
+                          Postgres expires after 30 days - avoided on purpose),
+                          TLS required, generous free storage for this scale.
+
+Cold-start mitigation: Render free instances sleep after ~15 min idle (first hit
+then takes ~50 s). A GitHub Actions cron pings /api/health every 10 minutes so
+reviewers always land on a warm service. Neon's scale-to-zero adds only ~1 s and
+needs no mitigation. Expected load (<100 concurrent visitors) is far below the
+free-tier ceilings of all three services.
+
+7. WHAT WOULD CHANGE FOR PRODUCTION (KNOWN, DELIBERATE OMISSIONS)
+-----------------------------------------------------------------
+Refresh-token rotation + short-lived access tokens; httpOnly cookie sessions
+behind a same-site reverse proxy; real PSP integration (Stripe) with webhooks
+and idempotency keys; email verification; rate limiting; optimistic-locking or
+SELECT ... FOR UPDATE on stock under real concurrency; structured logging,
+metrics and tracing; CI with tests (unit + Testcontainers integration); CDN-
+hosted images; secrets in a vault; horizontal scaling behind a load balancer.

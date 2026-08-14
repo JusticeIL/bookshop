@@ -1,0 +1,16 @@
+# Local development helper: `docker compose up -d` starts PostgreSQL only.
+# Run the backend with `mvn spring-boot:run` and the frontend with `npm run dev`.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: bookshop
+      POSTGRES_USER: bookshop
+      POSTGRES_PASSWORD: bookshop
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
