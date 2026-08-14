@@ -30,24 +30,77 @@ Check that `_to_delete/` is gone and that no `.env` file was committed.
 
 ## 1. Database — Neon (free serverless PostgreSQL)
 
-1. Sign up at [neon.tech](https://neon.tech) (GitHub login works).
-2. **Create project** → name `bookshop`, PostgreSQL 16, pick the region closest
-   to the Render region you'll choose in step 2.
-3. Open **Connection details** and copy the host, database name, role and
-   password.
-4. Assemble the three values Render will need:
+### 1.1 Sign up
 
-   - `DATABASE_URL` = `jdbc:postgresql://<host>/<database>?sslmode=require`
-     (note the `jdbc:` prefix — Neon shows a `postgresql://…` URL, which is
-     *not* the same thing)
-   - `DATABASE_USER` = the role name
-   - `DATABASE_PASSWORD` = the password
+Go to [neon.tech](https://neon.tech) and sign up — the GitHub button is fastest.
+The free plan needs no credit card and does not expire.
+
+### 1.2 Fill in the "Welcome to Neon — create your first project" form
+
+| Field | What to enter | Why |
+|-------|---------------|-----|
+| **Project name** | `bookshop` | Cosmetic only; it names the project in the dashboard. |
+| **Postgres version** | **16** if the dropdown offers it, otherwise leave the default | 16 matches `docker-compose.yml` and the README, so local and production behave identically. Nothing in the schema is version-specific, so a newer default also works — just say so in the README if you use one. |
+| **Region** | **AWS Europe Central 1 (Frankfurt)** | Put the database in the *same* region as the backend. Render's free tier offers Frankfurt but **not** London, so Frankfurt is the pairing that keeps every query on a short hop. Picking London here and Frankfurt there adds latency to every request. |
+| **Neon Auth** | **Leave the toggle OFF** | Neon Auth would create its own users/sessions tables and take over authentication. This application has its own accounts table and its own self-hosted OAuth2 authorization server — turning this on would duplicate and conflict with them. |
+
+Then press **Create project**.
+
+### 1.3 Copy the connection details
+
+Neon opens a **Connection Details** panel (also under *Dashboard → Connect*).
+
+1. In the **Database** dropdown keep the default, `neondb`.
+2. **Turn "Connection pooling" OFF** and use the **direct** host — the one
+   *without* `-pooler` in it.
+
+   > **This matters.** The pooled endpoint is PgBouncer in transaction-pooling
+   > mode. Flyway takes a *session-level* advisory lock while it migrates, and
+   > JDBC reuses server-side prepared statements — neither survives transaction
+   > pooling, so migrations can hang or fail on boot. The direct endpoint has
+   > none of those problems, and this app's connection pool is small enough
+   > that it doesn't need PgBouncer.
+
+3. Copy the connection string. It looks like:
+
+   ```
+   postgresql://neondb_owner:npg_XXXXXXXX@ep-cool-name-123456.eu-central-1.aws.neon.tech/neondb?sslmode=require
+                └─── role ───┘ └─ password ─┘ └──────────────── host ────────────────────┘ └─ db ─┘
+   ```
+
+   **Copy the password now** — Neon shows it once. (You can always reset it
+   later under *Settings → Roles*.)
+
+### 1.4 Convert it into the three values Render needs
+
+The backend takes the URL and the credentials **separately**, and it speaks
+JDBC, not libpq. From the string above:
+
+| Render variable | Value |
+|-----------------|-------|
+| `DATABASE_URL` | `jdbc:postgresql://ep-cool-name-123456.eu-central-1.aws.neon.tech/neondb?sslmode=require` |
+| `DATABASE_USER` | `neondb_owner` |
+| `DATABASE_PASSWORD` | `npg_XXXXXXXX` |
+
+Three things people get wrong here:
+
+- **Add the `jdbc:` prefix.** Neon gives you `postgresql://…`; Spring needs
+  `jdbc:postgresql://…`.
+- **Strip `role:password@` out of the URL.** They go in their own variables.
+- **Keep `?sslmode=require`.** Neon refuses plaintext connections.
+
+### 1.5 Nothing else to do here
+
+Do **not** create tables or run any SQL. On its first boot the backend's Flyway
+migrations create all five tables (`users`, `books`, `cart_items`, `orders`,
+`order_items`) with their constraints and seed the 20-book catalog. You can
+confirm afterwards in Neon's **SQL Editor** with `SELECT count(*) FROM books;`
+→ `20`.
 
 > **Why Neon and not Render's PostgreSQL:** Render's free database expires after
 > 30 days. Neon's free tier doesn't, so the demo can't die mid-review. Neon
-> scales to zero when idle; the first query after a pause adds about a second.
-
-No manual SQL is needed — Flyway creates all five tables and seeds the catalog.
+> scales to zero after ~5 minutes idle; the first query then takes roughly half
+> a second to wake it, which the keep-warm ping in step 6 hides anyway.
 
 ## 2. Backend — Render (free Docker web service)
 
