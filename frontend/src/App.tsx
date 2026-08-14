@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Footer from './components/Footer';
 import NavBar from './components/NavBar';
 import ProtectedRoute from './components/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 import Toasts from './components/Toasts';
 import CartPage from './pages/CartPage';
 import CatalogPage from './pages/CatalogPage';
@@ -38,6 +39,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <ScrollToTop />
       <NavBar />
       <main className="container">
         <Routes>

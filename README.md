@@ -3,7 +3,7 @@
 > **⚠️ DISCLAIMER — HOME ASSIGNMENT PROJECT**
 > This repository was built as a **take-home interview assignment**. It is intentionally
 > small in scope, and payment and shipping are mocked by design.
-> See [DISCLAIMER.md](DISCLAIMER.md) for details.
+> See [docs/DISCLAIMER.md](docs/DISCLAIMER.md) for details.
 
 A full-stack online bookshop built as a **REST API web application**: a React single-page
 client talks to a stateless RESTful JSON API backed by PostgreSQL. Browse a paginated
@@ -20,9 +20,9 @@ self-hosted OAuth2 authorization server embedded in the backend.
 | Database   | PostgreSQL 16                           | Neon (free serverless Postgres) | — |
 | Cache      | Redis 7 (catalog read-cache, optional)  | Docker locally / any Redis URL  | — |
 
-Deployment steps: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-Architecture rationale: [ARCHITECTURE.txt](ARCHITECTURE.txt).
-Security posture (SQL injection, XSS, CSRF, IDOR, rate limiting…): [SECURITY.md](SECURITY.md).
+Architecture, decisions and deployment topology: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Security posture (SQL injection, XSS, CSRF, IDOR, rate limiting…): [docs/SECURITY.md](docs/SECURITY.md).
+API endpoint hierarchy at a glance: [API-Reference.pdf](API-Reference.pdf).
 
 ## Features
 
@@ -57,7 +57,7 @@ Security posture (SQL injection, XSS, CSRF, IDOR, rate limiting…): [SECURITY.m
 backend/    Spring Boot 3 REST API (Spring Web MVC; Controller → Service → Repository, DTOs, Flyway)
             plus a self-hosted OAuth2 authorization server (Spring Authorization Server)
 frontend/   React + TypeScript SPA (Vite, Zustand stores, React Router)
-docs/       Deployment guide (Vercel + Render + Neon + optional Redis)
+docs/       ARCHITECTURE.md · SECURITY.md · DISCLAIMER.md
 render.yaml Render blueprint for the backend service
 .github/workflows/keep-warm.yml  Pings the API every 10 min so the free tier stays warm
 ```
@@ -130,6 +130,6 @@ OAuth2 endpoints (standard, served by the same application):
   never persisted, so restarting the backend requires signing in again.
 - **Security** — no SQL is assembled from strings, output is escaped, a strict CSP and
   HSTS are sent on every response, credential endpoints are rate limited, and every
-  user-scoped query filters by the authenticated user. See [SECURITY.md](SECURITY.md).
+  user-scoped query filters by the authenticated user. See [docs/SECURITY.md](docs/SECURITY.md).
 - Stock is decremented at checkout inside a single DB transaction (and restored on
   cancellation); carts are server-side so they survive devices/sessions.
