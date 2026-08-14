@@ -22,6 +22,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -127,7 +128,9 @@ public class SecurityConfig {
                         XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
                 .referrerPolicy(referrer -> referrer.policy(
                         ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
-                .permissionsPolicyHeader(permissions -> permissions.policy(
+                // Written directly rather than through the configurer DSL: the
+                // header writer API is stable across Spring Security versions.
+                .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",
                         "geolocation=(), microphone=(), camera=(), payment=(), usb=()"))
                 .httpStrictTransportSecurity(hsts -> hsts
                         .includeSubDomains(true)
